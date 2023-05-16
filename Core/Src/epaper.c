@@ -1,24 +1,5 @@
-/*---------------------------------------
- - WeAct Studio Official Link
- - taobao: weactstudio.taobao.com
- - aliexpress: weactstudio.aliexpress.com
- - github: github.com/WeActTC
- - gitee: gitee.com/WeAct-TC
- - blog: www.weact-tc.cn
- ---------------------------------------*/
-
 #include "epaper.h"
 #include "epdfont.h"
-
-//#include "systick.h"
-
-// epaper module
-// res pin  -> pa8
-// busy pin -> pa15
-// d/c pin  -> pb14
-// cs pin   -> pb12
-// sck pin  -> pb13
-// mosi pin -> pb15
 
 EPD_PAINT EPD_Paint;
 
@@ -42,44 +23,34 @@ void epd_delay(uint16_t ms) {
 
 void epd_res_set() {
   HAL_GPIO_WritePin(epd_pins.res_port, epd_pins.res_pin, GPIO_PIN_SET);
-  //GPIO_SetBits(GPIOA, GPIO_Pin_8);
 }
 
 void epd_res_reset() {
   HAL_GPIO_WritePin(epd_pins.res_port, epd_pins.res_pin, GPIO_PIN_RESET);
-  //GPIO_ResetBits(GPIOA, GPIO_Pin_8);
 }
 
 void epd_dc_set() {
   HAL_GPIO_WritePin(epd_pins.dc_port, epd_pins.dc_pin, GPIO_PIN_SET);
-  //GPIO_SetBits(GPIOB, GPIO_Pin_14);
 }
 
 void epd_dc_reset() {
   HAL_GPIO_WritePin(epd_pins.dc_port, epd_pins.dc_pin, GPIO_PIN_RESET);
-  //GPIO_ResetBits(GPIOB, GPIO_Pin_14);
 }
 
 void epd_cs_set() {
   HAL_GPIO_WritePin(epd_pins.cs_port, epd_pins.cs_pin, GPIO_PIN_SET);
-  //GPIO_SetBits(GPIOB, GPIO_Pin_12);
 }
 
 void epd_cs_reset() {
   HAL_GPIO_WritePin(epd_pins.cs_port, epd_pins.cs_pin, GPIO_PIN_RESET);
-  //GPIO_ResetBits(GPIOB, GPIO_Pin_12);
 }
 
 uint8_t epd_is_busy() {
   return HAL_GPIO_ReadPin(epd_pins.busy_port, epd_pins.busy_pin) == GPIO_PIN_RESET ? 0 : 1;
-  //return GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_15) == Bit_RESET ? 0 : 1;
 }
 
 void epd_io_init(void) {
   GPIO_InitTypeDef GPIO_InitStructure = { 0 };
-  //SPI_InitTypeDef spiConfig = { 0 };
-
-  //RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB, ENABLE);
 
   /* configure the epaper module res pin */
   GPIO_InitStructure.Mode = GPIO_MODE_OUTPUT_PP;
@@ -133,7 +104,6 @@ void epd_io_init(void) {
 void epd_write_reg(uint8_t reg) {
   epd_dc_reset();
   epd_cs_reset();
-
   HAL_SPI_Transmit(epd_pins.hspi, &reg, 1, 100);
   uint8_t timeout = 100;
   while (HAL_SPI_GetState(epd_pins.hspi) != HAL_SPI_STATE_READY) {
@@ -141,17 +111,12 @@ void epd_write_reg(uint8_t reg) {
     if (!timeout) break;
     HAL_Delay(1);
   }
-
-  //SPI_I2S_SendData(SPI2, reg);
-  //while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_BSY) != RESET);
-
   epd_cs_set();
   epd_dc_set();
 }
 
 void epd_write_data(uint8_t data) {
   epd_cs_reset();
-
   HAL_SPI_Transmit(epd_pins.hspi, &data, 1, 100);
   uint8_t timeout = 100;
   while (HAL_SPI_GetState(epd_pins.hspi) != HAL_SPI_STATE_READY) {
@@ -159,9 +124,6 @@ void epd_write_data(uint8_t data) {
     if (!timeout) break;
     HAL_Delay(1);
   }
-  //SPI_I2S_SendData(SPI2, data);
-  //while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_BSY) != RESET);
-
   epd_cs_set();
 }
 
@@ -173,8 +135,6 @@ void _epd_write_data(uint8_t data) {
     HAL_Delay(1);
   }
   HAL_SPI_Transmit(epd_pins.hspi, &data, 1, 100);
-  //while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE) == RESET);
-  //SPI_I2S_SendData(SPI2, data);
 }
 
 void _epd_write_data_over() {
@@ -184,7 +144,6 @@ void _epd_write_data_over() {
     if (!timeout) break;
     HAL_Delay(1);
   }
-  //while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_BSY) != RESET);
 }
 
 uint8_t epd_wait_busy() {
@@ -572,25 +531,25 @@ void epd_paint_drawCircle(uint16_t X_Center, uint16_t Y_Center, uint16_t Radius,
   }
 }
 
-void epd_paint_showChar(uint16_t x, uint16_t y, uint16_t chr, uint16_t size1, uint16_t color) {
+void epd_paint_showChar(uint16_t x, uint16_t y, uint16_t chr, uint16_t size, uint16_t color) {
   uint16_t i, m, temp, size2, chr1;
   uint16_t x0, y0;
   x += 1, y += 1, x0 = x, y0 = y;
-  if (x - size1 > EPD_H) return;
-  if (size1 == 8) size2 = 6;
-  else size2 = (size1 / 8 + ((size1 % 8) ? 1 : 0)) * (size1 / 2);
+  if (x - size > EPD_H) return;
+  if (size == 8) size2 = 6;
+  else size2 = (size / 8 + ((size % 8) ? 1 : 0)) * (size / 2);
   chr1 = chr - ' ';
   for (i = 0; i < size2; i++) {
-    if (size1 == 8) {
+    if (size == 8) {
       temp = asc2_0806[chr1][i];
     } // 0806
-    else if (size1 == 12) {
+    else if (size == 12) {
       temp = asc2_1206[chr1][i];
     } // 1206
-    else if (size1 == 16) {
+    else if (size == 16) {
       temp = asc2_1608[chr1][i];
     } // 1608
-    else if (size1 == 24) {
+    else if (size == 24) {
       temp = asc2_2412[chr1][i];
     } // 2412
     else return;
@@ -601,7 +560,7 @@ void epd_paint_showChar(uint16_t x, uint16_t y, uint16_t chr, uint16_t size1, ui
       y++;
     }
     x++;
-    if ((size1 != 8) && ((x - x0) == size1 / 2)) {
+    if ((size != 8) && ((x - x0) == size / 2)) {
       x = x0;
       y0 = y0 + 8;
     }
@@ -609,15 +568,15 @@ void epd_paint_showChar(uint16_t x, uint16_t y, uint16_t chr, uint16_t size1, ui
   }
 }
 
-void epd_paint_showString(uint16_t x, uint16_t y, uint8_t *chr, uint16_t size1, uint16_t color) {
+void epd_paint_showString(uint16_t x, uint16_t y, uint8_t *chr, uint16_t size, uint16_t color) {
   while (*chr != '\0') {
-    epd_paint_showChar(x, y, *chr, size1, color);
+    epd_paint_showChar(x, y, *chr, size, color);
     chr++;
-    if (size1 == 8) {
+    if (size == 8) {
       x += 6;
     }
     else {
-      x += size1 / 2;
+      x += size / 2;
     }
   }
 }
@@ -631,52 +590,18 @@ static uint32_t _Pow(uint16_t m, uint16_t n) {
   return result;
 }
 
-void epd_paint_showNum(uint16_t x, uint16_t y, uint32_t num, uint16_t len, uint16_t size1,
+void epd_paint_showNum(uint16_t x, uint16_t y, uint32_t num, uint16_t len, uint16_t size,
     uint16_t color) {
   uint8_t t, temp, m = 0;
-  if (size1 == 8) m = 2;
+  if (size == 8) m = 2;
   for (t = 0; t < len; t++) {
     temp = (num / _Pow(10, len - t - 1)) % 10;
     if (temp == 0) {
-      epd_paint_showChar(x + (size1 / 2 + m) * t, y, '0', size1, color);
+      epd_paint_showChar(x + (size / 2 + m) * t, y, '0', size, color);
     }
     else {
-      epd_paint_showChar(x + (size1 / 2 + m) * t, y, temp + '0', size1, color);
+      epd_paint_showChar(x + (size / 2 + m) * t, y, temp + '0', size, color);
     }
-  }
-}
-
-void epd_paint_showChinese(uint16_t x, uint16_t y, uint16_t num, uint16_t size1, uint16_t color) {
-  uint16_t m, temp;
-  uint16_t x0, y0;
-  uint16_t i, size3 = (size1 / 8 + ((size1 % 8) ? 1 : 0)) * size1;
-  x += 1, y += 1, x0 = x, y0 = y;
-  for (i = 0; i < size3; i++) {
-    if (size1 == 16) {
-      temp = Hzk1[num][i];
-    } // 16*16
-    else if (size1 == 24) {
-      temp = Hzk2[num][i];
-    } // 24*24
-    else if (size1 == 32) {
-      temp = Hzk3[num][i];
-    } // 32*32
-    else if (size1 == 64) {
-      temp = Hzk4[num][i];
-    } // 64*64
-    else return;
-    for (m = 0; m < 8; m++) {
-      if (temp & 0x01) epd_paint_drawPoint(x, y, color);
-      else epd_paint_drawPoint(x, y, !color);
-      temp >>= 1;
-      y++;
-    }
-    x++;
-    if ((x - x0) == size1) {
-      x = x0;
-      y0 = y0 + 8;
-    }
-    y = y0;
   }
 }
 

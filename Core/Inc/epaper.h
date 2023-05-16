@@ -6,29 +6,10 @@ extern "C"
 {
 #endif
 
-//#include "ch32f10x.h"
-//#include "stdint.h"
-//#include "stm32f103x6.h"
-//#include "stm32f1xx_hal_gpio.h"
-//#include "stm32f1xx_hal_spi.h"
 #include "main.h"
 
-#define EPD_29
-//#define EPD_213
-
-#if (!defined EPD_29) && (!defined EPD_213)
-#error EPD Type Undefine
-#endif
-
-#ifdef EPD_29
 #define EPD_W 128
 #define EPD_H 296
-#endif
-
-#ifdef EPD_213
-#define EPD_W 122
-#define EPD_H 250&
-#endif
 
 #define EPD_OK 0
 #define EPD_ERROR 1
@@ -51,6 +32,7 @@ extern "C"
 #define EPD_DEEPSLEEP_MODE2 (0x03)
 
 #define EPD_W_BUFF_SIZE ((EPD_W % 8 == 0) ? (EPD_W / 8) : (EPD_W / 8 + 1))
+
 typedef struct {
   uint8_t *Image;
   uint16_t Width;
