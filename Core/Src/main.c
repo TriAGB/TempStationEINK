@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "epaper.h"
+#include "ds3231.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -119,28 +120,36 @@ int main(void) {
 	MX_ADC_Init();
 
 	/* USER CODE BEGIN 2 */
-	epd_io_init();
-	epd_init();
-	epd_paint_newimage(image_bw, EPD_W, EPD_H, EPD_ROTATE_180, EPD_COLOR_WHITE);
-	epd_paint_selectimage(image_bw);
-	epd_paint_clear(EPD_COLOR_WHITE);
-	epd_paint_showString(10, 0, (uint8_t*) &"Hello world!", EPD_FONT_SIZE24x12,
-			EPD_COLOR_BLACK);
-	epd_paint_showString(10, 29, (uint8_t*) &"This is e-ink",
-			EPD_FONT_SIZE16x8,
-			EPD_COLOR_BLACK);
-	epd_paint_showString(10, 50, (uint8_t*) &"test 0.1.2.3.4.5..",
-			EPD_FONT_SIZE16x8,
-			EPD_COLOR_BLACK);
-	epd_displayBW(image_bw);
-	epd_enter_deepsleepmode(EPD_DEEPSLEEP_MODE1);
 
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
-
+	uint16_t posXStr = (296 / 2) - (24 * 8 / 2);
+	uint16_t posYStr = (128 / 2) - 12;
+	unsigned char hour = 9, minute = 0, second = 0;
+	char timeStr[9] = { 0 };
+	setHour(hour);
+	setMinute(minute);
+	setSecond(second);
+	timeToStr(timeStr, hour, minute, second);
+	epd_init();
+	epd_paint_newimage(image_bw, EPD_W, EPD_H, EPD_ROTATE_180, EPD_COLOR_WHITE);
+	epd_paint_selectimage(image_bw);
+	epd_paint_selectimage(image_bw);
+	epd_paint_clear(EPD_COLOR_WHITE);
+	epd_paint_showString(posXStr, posYStr, (uint8_t*) timeStr, EPD_FONT_SIZE24x12, EPD_COLOR_BLACK);
+	epd_displayBW(image_bw);
 	while (1) {
+		HAL_Delay(1000);
+		hour = getHour();
+		minute = getMinute();
+		second = getSecond();
+		timeToStr(timeStr, hour, minute, second);
+		epd_paint_selectimage(image_bw);
+		epd_paint_clear(EPD_COLOR_WHITE);
+		epd_paint_showString(posXStr, posYStr, (uint8_t*) timeStr, EPD_FONT_SIZE24x12, EPD_COLOR_BLACK);
+		epd_displayBW_partial(image_bw);
 
 		/* USER CODE END WHILE */
 
