@@ -101,6 +101,33 @@ void epd_io_init(void) {
 //  SPI_Cmd(SPI2, ENABLE);
 }
 
+/**
+ * @brief Write bytes to display (command or data)
+ * @param reg register code to write
+ * @param *data pointer to write data
+ * @param size size of data
+ * @retval errorcode (HAL_OK - ok)
+ */
+uint8_t epdWriteBytes(uint8_t reg, uint8_t data[], uint16_t size) {
+	HAL_GPIO_WritePin(epd_pins.cs_port, epd_pins.cs_pin, GPIO_PIN_RESET);
+	__NOP();
+	HAL_SPI_StateTypeDef result;
+	result = HAL_SPI_GetState(epd_pins.hspi);
+	if(result == HAL_SPI_STATE_READY) {
+		HAL_GPIO_WritePin(epd_pins.cs_port, epd_pins.dc_pin, GPIO_PIN_RESET);
+		__NOP();
+		result = HAL_SPI_Transmit(epd_pins.hspi, &reg, 1, 1);
+		HAL_GPIO_WritePin(epd_pins.cs_port, epd_pins.dc_pin, GPIO_PIN_SET);
+		__NOP();
+		if(result == HAL_OK) {
+			result = HAL_SPI_Transmit(epd_pins.hspi, data, size, 1);
+		}
+	}
+	HAL_GPIO_WritePin(epd_pins.cs_port, epd_pins.cs_pin, GPIO_PIN_SET);
+	__NOP();
+	return result;
+}
+
 void epd_write_reg(uint8_t reg) {
   epd_dc_reset();
   epd_cs_reset();
@@ -171,46 +198,56 @@ uint8_t epd_init(void) {
 
   if (epd_wait_busy()) return 1;
 
-  epd_write_reg(0x12); // SWRESET
+  //epd_write_reg(0x12); // SWRESET
+  epdWriteBytes(0x12, (uint8_t []){0}, 0);
 
   if (epd_wait_busy()) return 1;
 
-  epd_write_reg(0x01); // Driver output control
-  epd_write_data(0x27);
-  epd_write_data(0x01);
-  epd_write_data(0x01);
+  //epd_write_reg(0x01); // Driver output control
+  //epd_write_data(0x27);
+  //epd_write_data(0x01);
+  //epd_write_data(0x01);
+  epdWriteBytes(0x01, (uint8_t []){0x27, 0x01, 0x01}, 3);
 
-  epd_write_reg(0x11); // data entry mode
-  epd_write_data(0x01);
+  //epd_write_reg(0x11); // data entry mode
+  //epd_write_data(0x01);
+  epdWriteBytes(0x11, (uint8_t []){0x01}, 1);
 
-  epd_write_reg(0x44); // set Ram-X address start/end position
-  epd_write_data(0x00);
-  epd_write_data(0x0F); // 0x0F-->(15+1)*8=128
+  //epd_write_reg(0x44); // set Ram-X address start/end position
+  //epd_write_data(0x00);
+  //epd_write_data(0x0F); // 0x0F-->(15+1)*8=128
+  epdWriteBytes(0x44, (uint8_t []){0x00, 0x0F}, 2);
 
-  epd_write_reg(0x45); // set Ram-Y address start/end position
-  epd_write_data(0x27); // 0x127-->(295+1)=296
-  epd_write_data(0x01);
-  epd_write_data(0x00);
-  epd_write_data(0x00);
+  //epd_write_reg(0x45); // set Ram-Y address start/end position
+  //epd_write_data(0x27); // 0x127-->(295+1)=296
+  //epd_write_data(0x01);
+  //epd_write_data(0x00);
+  //epd_write_data(0x00);
+  epdWriteBytes(0x45, (uint8_t []){0x27, 0x01, 0x00, 0x00}, 4);
 
-  epd_write_reg(0x3C); // BorderWavefrom
-  epd_write_data(0x05);
+  //epd_write_reg(0x3C); // BorderWavefrom
+  //epd_write_data(0x05);
+  epdWriteBytes(0x3C, (uint8_t []){0x05}, 1);
 
-  epd_write_reg(0x21); //  Display update control
-  epd_write_data(0x00);
-  epd_write_data(0x80);
+  //epd_write_reg(0x21); //  Display update control
+  //epd_write_data(0x00);
+  //epd_write_data(0x80);
+  epdWriteBytes(0x21, (uint8_t []){0x00, 0x80}, 2);
 
-  epd_write_reg(0x18); // Read built-in temperature sensor
-  epd_write_data(0x80);
+  //epd_write_reg(0x18); // Read built-in temperature sensor
+  //epd_write_data(0x80);
+  epdWriteBytes(0x18, (uint8_t []){0x80}, 1);
 
-  epd_write_reg(0x4E); // set RAM x address count to 0;
-  epd_write_data(0x00);
-  epd_write_reg(0x4F); // set RAM y address count to 0x127;
-  epd_write_data(0x27);
-  epd_write_data(0x01);
+  //epd_write_reg(0x4E); // set RAM x address count to 0;
+  //epd_write_data(0x00);
+  epdWriteBytes(0x4E, (uint8_t []){0x00}, 1);
+
+  //epd_write_reg(0x4F); // set RAM y address count to 0x127;
+  //epd_write_data(0x27);
+  //epd_write_data(0x01);
+  epdWriteBytes(0x4F, (uint8_t []){0x27, 0x01}, 2);
 
   if (epd_wait_busy()) return 1;
-
   return 0;
 }
 

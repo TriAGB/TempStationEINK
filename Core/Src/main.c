@@ -125,8 +125,8 @@ int main(void) {
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
-	uint16_t posXStr = (296 / 2) - (24 * 8 / 2);
-	uint16_t posYStr = (128 / 2) - 12;
+	uint16_t posXStr = (EPD_H / 2) - (24 * 8 / 2);
+	uint16_t posYStr = (EPD_W / 2) - 12;
 	unsigned char hour = 9, minute = 0, second = 0;
 	char timeStr[9] = { 0 };
 	setHour(hour);
@@ -140,16 +140,27 @@ int main(void) {
 	epd_paint_clear(EPD_COLOR_WHITE);
 	epd_paint_showString(posXStr, posYStr, (uint8_t*) timeStr, EPD_FONT_SIZE24x12, EPD_COLOR_BLACK);
 	epd_displayBW(image_bw);
+
+	const uint32_t interval = 10000;
+	uint32_t ptime = 0;
+	uint32_t ntime = 0;
+
+	epd_init_partial();
+
 	while (1) {
-		HAL_Delay(1000);
-		hour = getHour();
-		minute = getMinute();
-		second = getSecond();
-		timeToStr(timeStr, hour, minute, second);
-		epd_paint_selectimage(image_bw);
-		epd_paint_clear(EPD_COLOR_WHITE);
-		epd_paint_showString(posXStr, posYStr, (uint8_t*) timeStr, EPD_FONT_SIZE24x12, EPD_COLOR_BLACK);
-		epd_displayBW_partial(image_bw);
+		ntime = HAL_GetTick();
+		if((ntime - ptime) > interval) {
+			ptime = ntime;
+			hour = getHour();
+			minute = getMinute();
+			second = getSecond();
+			timeToStr(timeStr, hour, minute, second);
+			epd_paint_selectimage(image_bw);
+			epd_paint_clear(EPD_COLOR_WHITE);
+			epd_paint_showString(posXStr, posYStr, (uint8_t*) timeStr, EPD_FONT_SIZE24x12, EPD_COLOR_BLACK);
+			epd_displayBW_partial(image_bw);
+		}
+
 
 		/* USER CODE END WHILE */
 
