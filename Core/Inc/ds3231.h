@@ -160,6 +160,11 @@ byte setAlarm(byte numAlarm);
  * @brief Enable oscillator (run clock)
  */
 byte clockEnable(void);
+/**
+ * @brief Clear alarm bit at status register
+ * @param byte Number of alarm (1 - alarm 1, 2 - alarm 2, 3 - alarm 1 and 2)
+ */
+byte clearAlarmFlag(byte numAlarm);
 
 // Temperature function
 //float getTemperature();

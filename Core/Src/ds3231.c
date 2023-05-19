@@ -189,7 +189,13 @@ byte setAlarm(byte numAlarm) {
 
 byte clockEnable(void) {
 	byte result = rwByte(0, DS3231_REG_CTRL, 0); // Read Control register
+	result = result | 0b00000100; // Enable INTCN bit (Enable INT/SQW pin on alarm)
 	return rwByte(1, DS3231_REG_CTRL, result & 0b01111111); // Insert "Enable oscillator" and write
+}
+
+byte clearAlarmFlag(byte numAlarm) {
+	byte result = rwByte(0, DS3231_REG_STAT, 0); // Read Status register
+	return rwByte(1, DS3231_REG_CTRL, result & (numAlarm | 0b11111100)); // Write flag bit
 }
 
 /*
@@ -250,157 +256,7 @@ byte clockEnable(void) {
  }
  }
 
- void getA2Time(byte& A2Day, byte& A2Hour, byte& A2Minute, byte& AlarmBits, bool& A2Dy, bool& A2h12, bool& A2PM) {
- byte temp_buffer;
- Wire.beginTransmission(CLOCK_ADDRESS);
- Wire.write(uint8_t(0x0b));
- Wire.endTransmission();
 
- Wire.requestFrom(CLOCK_ADDRESS, 3);
- temp_buffer = Wire.read();	// Get A2M2 and A2 Minutes
- A2Minute = bcdToDec(temp_buffer & 0b01111111);
- // put A2M2 bit in position 4 of DS3231_AlarmBits.
- AlarmBits = AlarmBits | (temp_buffer & 0b10000000)>>3;
-
- temp_buffer = Wire.read();// Get A2M3 and A2 Hour
- // put A2M3 bit in position 5 of DS3231_AlarmBits.
- AlarmBits = AlarmBits | (temp_buffer & 0b10000000)>>2;
- // determine A2 12/24 mode
- A2h12 = temp_buffer & 0b01000000;
- if (A2h12) {
- A2PM = temp_buffer & 0b00100000;			// determine am/pm
- A2Hour = bcdToDec(temp_buffer & 0b00011111);// 12-hour
- } else {
- A2Hour = bcdToDec(temp_buffer & 0b00111111);	// 24-hour
- }
-
- temp_buffer = Wire.read();	// Get A2M4 and A1 Day/Date
- // put A2M4 bit in position 6 of DS3231_AlarmBits.
- AlarmBits = AlarmBits | (temp_buffer & 0b10000000)>>1;
- // determine A2 day or date flag
- A2Dy = (temp_buffer & 0b01000000)>>6;
- if (A2Dy) {
- // alarm is by day of week, not date.
- A2Day = bcdToDec(temp_buffer & 0b00001111);
- } else {
- // alarm is by date, not day of week.
- A2Day = bcdToDec(temp_buffer & 0b00111111);
- }
- }
-
- void setA1Time(byte A1Day, byte A1Hour, byte A1Minute, byte A1Second,
- byte AlarmBits, bool A1Dy, bool A1h12, bool A1PM) {
- //	Sets the alarm-1 date and time on the DS3231, using A1* information
- byte temp_buffer;
- Wire.beginTransmission(CLOCK_ADDRESS);
- Wire.write(uint8_t(0x07));	// A1 starts at 07h
- // Send A1 second and A1M1
- Wire.write(decToBcd(A1Second) | ((AlarmBits & 0b00000001) << 7));
- // Send A1 Minute and A1M2
- Wire.write(decToBcd(A1Minute) | ((AlarmBits & 0b00000010) << 6));
- // Figure out A1 hour
- if (A1h12) {
- // Start by converting existing time to h12 if it was given in 24h.
- if (A1Hour > 12) {
- // well, then, this obviously isn't a h12 time, is it?
- A1Hour = A1Hour - 12;
- A1PM = true;
- }
- if (A1PM) {
- // Afternoon
- // Convert the hour to BCD and add appropriate flags.
- temp_buffer = decToBcd(A1Hour) | 0b01100000;
- } else {
- // Morning
- // Convert the hour to BCD and add appropriate flags.
- temp_buffer = decToBcd(A1Hour) | 0b01000000;
- }
- } else {
- // Now for 24h
- temp_buffer = decToBcd(A1Hour);
- }
- temp_buffer = temp_buffer | ((AlarmBits & 0b00000100) << 5);
- // A1 hour is figured out, send it
- Wire.write(temp_buffer);
- // Figure out A1 day/date and A1M4
- temp_buffer = ((AlarmBits & 0b00001000) << 4) | decToBcd(A1Day);
- if (A1Dy) {
- // Set A1 Day/Date flag (Otherwise it's zero)
- temp_buffer = temp_buffer | 0b01000000;
- }
- Wire.write(temp_buffer);
- // All done!
- Wire.endTransmission();
- }
-
- void setA2Time(byte A2Day, byte A2Hour, byte A2Minute, byte AlarmBits,
- bool A2Dy, bool A2h12, bool A2PM) {
- //	Sets the alarm-2 date and time on the DS3231, using A2* information
- byte temp_buffer;
- Wire.beginTransmission(CLOCK_ADDRESS);
- Wire.write(uint8_t(0x0b));	// A1 starts at 0bh
- // Send A2 Minute and A2M2
- Wire.write(decToBcd(A2Minute) | ((AlarmBits & 0b00010000) << 3));
- // Figure out A2 hour
- if (A2h12) {
- // Start by converting existing time to h12 if it was given in 24h.
- if (A2Hour > 12) {
- // well, then, this obviously isn't a h12 time, is it?
- A2Hour = A2Hour - 12;
- A2PM = true;
- }
- if (A2PM) {
- // Afternoon
- // Convert the hour to BCD and add appropriate flags.
- temp_buffer = decToBcd(A2Hour) | 0b01100000;
- } else {
- // Morning
- // Convert the hour to BCD and add appropriate flags.
- temp_buffer = decToBcd(A2Hour) | 0b01000000;
- }
- } else {
- // Now for 24h
- temp_buffer = decToBcd(A2Hour);
- }
- // add in A2M3 bit
- temp_buffer = temp_buffer | ((AlarmBits & 0b00100000) << 2);
- // A2 hour is figured out, send it
- Wire.write(temp_buffer);
- // Figure out A2 day/date and A2M4
- temp_buffer = ((AlarmBits & 0b01000000) << 1) | decToBcd(A2Day);
- if (A2Dy) {
- // Set A2 Day/Date flag (Otherwise it's zero)
- temp_buffer = temp_buffer | 0b01000000;
- }
- Wire.write(temp_buffer);
- // All done!
- Wire.endTransmission();
- }
-
- void turnOnAlarm(byte Alarm) {
- // turns on alarm number "Alarm". Defaults to 2 if Alarm is not 1.
- byte temp_buffer = readControlByte(0);
- // modify control byte
- if (Alarm == 1) {
- temp_buffer = temp_buffer | 0b00000101;
- } else {
- temp_buffer = temp_buffer | 0b00000110;
- }
- writeControlByte(temp_buffer, 0);
- }
-
- void turnOffAlarm(byte Alarm) {
- // turns off alarm number "Alarm". Defaults to 2 if Alarm is not 1.
- // Leaves interrupt pin alone.
- byte temp_buffer = readControlByte(0);
- // modify control byte
- if (Alarm == 1) {
- temp_buffer = temp_buffer & 0b11111110;
- } else {
- temp_buffer = temp_buffer & 0b11111101;
- }
- writeControlByte(temp_buffer, 0);
- }
 
  bool checkAlarmEnabled(byte Alarm) {
  // Checks whether the given alarm is enabled.
@@ -433,40 +289,6 @@ byte clockEnable(void) {
  }
  writeControlByte(temp_buffer, 1);
  return result;
- }
-
- void enableOscillator(bool TF, bool battery, byte frequency) {
- // turns oscillator on or off. True is on, false is off.
- // if battery is true, turns on even for battery-only operation,
- // otherwise turns off if Vcc is off.
- // frequency must be 0, 1, 2, or 3.
- // 0 = 1 Hz
- // 1 = 1.024 kHz
- // 2 = 4.096 kHz
- // 3 = 8.192 kHz (Default if frequency byte is out of range)
- if (frequency > 3)
- frequency = 3;
- // read control byte in, but zero out current state of RS2 and RS1.
- byte temp_buffer = readControlByte(0) & 0b11100111;
- if (battery) {
- // turn on BBSQW flag
- temp_buffer = temp_buffer | 0b01000000;
- } else {
- // turn off BBSQW flag
- temp_buffer = temp_buffer & 0b10111111;
- }
- if (TF) {
- // set ~EOSC to 0 and INTCN to zero.
- temp_buffer = temp_buffer & 0b01111011;
- } else {
- // set ~EOSC to 1, leave INTCN as is.
- temp_buffer = temp_buffer | 0b10000000;
- }
- // shift frequency into bits 3 and 4 and set.
- frequency = frequency << 3;
- temp_buffer = temp_buffer | frequency;
- // And write the control bits
- writeControlByte(temp_buffer, 0);
  }
 
  void enable32kHz(bool TF) {
