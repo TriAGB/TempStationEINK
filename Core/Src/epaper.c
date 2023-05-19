@@ -7,7 +7,7 @@ EPD_PINS epd_pins;
 
 static uint8_t _hibernating = 1;
 
-static const unsigned char ut_partial[] = { 0x0, 0x40, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+unsigned char ut_partial[] = { 0x0, 0x40, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
     0x0, 0x80, 0x80, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x40, 0x40, 0x0, 0x0, 0x0,
     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x80, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0A, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
@@ -16,10 +16,6 @@ static const unsigned char ut_partial[] = { 0x0, 0x40, 0x0, 0x0, 0x0, 0x0, 0x0, 
     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
     0x0, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x0, 0x0, 0x0, };
-
-void epd_delay(uint16_t ms) {
-  HAL_Delay(ms);
-}
 
 void epd_res_set() {
   HAL_GPIO_WritePin(epd_pins.res_port, epd_pins.res_pin, GPIO_PIN_SET);
@@ -128,51 +124,6 @@ uint8_t epdWriteBytes(uint8_t reg, uint8_t data[], uint16_t size) {
 	return result;
 }
 
-void epd_write_reg(uint8_t reg) {
-  epd_dc_reset();
-  epd_cs_reset();
-  HAL_SPI_Transmit(epd_pins.hspi, &reg, 1, 100);
-  uint8_t timeout = 100;
-  while (HAL_SPI_GetState(epd_pins.hspi) != HAL_SPI_STATE_READY) {
-    timeout--;
-    if (!timeout) break;
-    HAL_Delay(1);
-  }
-  epd_cs_set();
-  epd_dc_set();
-}
-
-void epd_write_data(uint8_t data) {
-  epd_cs_reset();
-  HAL_SPI_Transmit(epd_pins.hspi, &data, 1, 100);
-  uint8_t timeout = 100;
-  while (HAL_SPI_GetState(epd_pins.hspi) != HAL_SPI_STATE_READY) {
-    timeout--;
-    if (!timeout) break;
-    HAL_Delay(1);
-  }
-  epd_cs_set();
-}
-
-void _epd_write_data(uint8_t data) {
-  uint8_t timeout = 100;
-  while (HAL_SPI_GetState(epd_pins.hspi) != HAL_SPI_STATE_READY) {
-    timeout--;
-    if (!timeout) break;
-    HAL_Delay(1);
-  }
-  HAL_SPI_Transmit(epd_pins.hspi, &data, 1, 100);
-}
-
-void _epd_write_data_over() {
-  uint16_t timeout = 1000;
-  while (HAL_SPI_GetState(epd_pins.hspi) != HAL_SPI_STATE_READY) {
-    timeout--;
-    if (!timeout) break;
-    HAL_Delay(1);
-  }
-}
-
 uint8_t epd_wait_busy() {
   uint32_t timeout = 0;
   while (epd_is_busy()) {
@@ -180,16 +131,16 @@ uint8_t epd_wait_busy() {
     if (timeout > 4000) {
       return 1;
     }
-    epd_delay(1);
+    HAL_Delay(1);
   }
   return 0;
 }
 
 void epd_reset(void) {
   epd_res_reset();
-  epd_delay(50);
+  HAL_Delay(50);
   epd_res_set();
-  epd_delay(50);
+  HAL_Delay(50);
   _hibernating = 0;
 }
 
@@ -251,116 +202,25 @@ void epd_init_internalTempSensor(void) {
 	epdWriteBytes(0x1A, (uint8_t []){0x7F, 0xF0}, 2);
 }
 
-void epd_update(void) {
-	epdWriteBytes(0x22, (uint8_t []){0xF7}, 1); // Display Update Control
-	epdWriteBytes(0x20, (uint8_t []){0x00}, 0); // Activate Display Update Sequence
-  epd_wait_busy();
-}
-
-void epd_update_partial(void) {
-	epdWriteBytes(0x22, (uint8_t []){0xCC}, 1); // Display Update Control
+void epd_update(uint8_t partial) {
+  if(partial) epdWriteBytes(0x22, (uint8_t []){0xCC}, 1); // Display Update Control
+  else epdWriteBytes(0x22, (uint8_t []){0xF7}, 1);
 	epdWriteBytes(0x20, (uint8_t []){0x00}, 0); // Activate Display Update Sequence
   epd_wait_busy();
 }
 
 void epd_setpos(uint16_t x, uint16_t y) {
-  uint8_t _x;
-  uint16_t _y;
-
-  _x = x / 8;
-
-  _y = 295 - y;
-
-  epd_write_reg(0x4E); // set RAM x address count to 0;
-  epd_write_data(_x);
-  epd_write_reg(0x4F); // set RAM y address count to 0x127;
-  epd_write_data(_y & 0xff);
-  epd_write_data(_y >> 8 & 0x01);
+  epdWriteBytes(0x4E, (uint8_t []){x / 8}, 1); // set RAM x address count to 0;
+  y = 295 - y;
+  epdWriteBytes(0x4F, (uint8_t []){ y, y >> 8}, 2); // set RAM y address count to 0x127;
 }
 
-void epd_writedata(uint8_t *Image1, uint32_t length) {
-  epd_cs_reset();
-  for (uint32_t j = 0; j < length; j++) {
-    _epd_write_data(Image1[j]);
-  }
-  _epd_write_data_over();
-  epd_cs_set();
-}
-
-void epd_display(uint8_t *Image1, uint8_t *Image2) {
-  uint32_t Width, Height, i, j;
-  uint32_t k = 0;
-  Width = EPD_H;
-  Height = EPD_W_BUFF_SIZE;
-
+void epd_display(uint8_t *Image1, uint8_t partial) {
+  //epd_setpos(0, 0);
+  //epdWriteBytes(0x26, Image1, EPD_H * EPD_W_BUFF_SIZE);
   epd_setpos(0, 0);
-
-  epd_write_reg(0x24);
-  epd_writedata(Image1, Width * Height);
-
-  epd_setpos(0, 0);
-
-  epd_write_reg(0x26);
-  k = 0;
-  epd_cs_reset();
-  for (j = 0; j < Height; j++) {
-    for (i = 0; i < Width; i++) {
-      _epd_write_data(~Image2[k]);
-      k++;
-    }
-  }
-  _epd_write_data_over();
-  epd_cs_set();
-
-  epd_update();
-}
-
-void epd_displayBW(uint8_t *Image) {
-  uint32_t Width, Height;
-
-  Width = EPD_H;
-  Height = EPD_W_BUFF_SIZE;
-
-  epd_setpos(0, 0);
-  epd_write_reg(0x26);
-  epd_writedata(Image, Width * Height);
-
-  epd_setpos(0, 0);
-  epd_write_reg(0x24);
-  epd_writedata(Image, Width * Height);
-
-  epd_update();
-}
-
-void epd_displayBW_partial(uint8_t *Image) {
-  uint32_t Width, Height;
-
-  Width = EPD_H;
-  Height = EPD_W_BUFF_SIZE;
-
-  epd_setpos(0, 0);
-  epd_write_reg(0x24);
-  epd_writedata(Image, Width * Height);
-
-  epd_update_partial();
-
-  epd_setpos(0, 0);
-  epd_write_reg(0x26);
-  epd_writedata(Image, Width * Height);
-}
-
-void epd_displayRED(uint8_t *Image) {
-  uint32_t Width, Height;
-
-  Width = EPD_H;
-  Height = EPD_W_BUFF_SIZE;
-
-  epd_setpos(0, 0);
-
-  epd_write_reg(0x26);
-  epd_writedata(Image, Width * Height);
-
-  epd_update();
+  epdWriteBytes(0x24, Image1, EPD_H * EPD_W_BUFF_SIZE);
+  epd_update(partial);
 }
 
 void epd_paint_newimage(uint8_t *image, uint16_t Width, uint16_t Height, uint16_t Rotate,
