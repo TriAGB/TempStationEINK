@@ -139,7 +139,7 @@ int main(void) {
 	epd_paint_selectimage(image_bw);
 	epd_paint_clear(EPD_COLOR_WHITE);
 	epd_paint_showString(posXStr, posYStr, (uint8_t*) timeStr, EPD_FONT_SIZE24x12, EPD_COLOR_BLACK);
-	epd_displayBW(image_bw);
+	epd_display(image_bw, 0);
 
 	const uint32_t interval = 10000;
 	uint32_t ptime = 0;
@@ -158,7 +158,7 @@ int main(void) {
 			epd_paint_selectimage(image_bw);
 			epd_paint_clear(EPD_COLOR_WHITE);
 			epd_paint_showString(posXStr, posYStr, (uint8_t*) timeStr, EPD_FONT_SIZE24x12, EPD_COLOR_BLACK);
-			epd_displayBW_partial(image_bw);
+			epd_display(image_bw, 1);
 		}
 
 
