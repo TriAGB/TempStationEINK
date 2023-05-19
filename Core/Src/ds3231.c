@@ -75,18 +75,9 @@ byte getYear() {
 	return bcdToDec(rwByte(0, DS3231_REG_YEAR, 0));
 }
 
-void clearOSF() {
-	byte temp = rwByte(0, DS3231_REG_STAT, 0);
-	rwByte(1, DS3231_REG_STAT, (temp & 0b01111111));
-}
-
 void setSecond(byte Second) {
-	// Sets the seconds 
-	// This function also resets the Oscillator Stop Flag, which is set
-	// whenever power is interrupted.
 	rwByte(1, DS3231_REG_SECOND, decToBcd(Second));
-	// Clear OSF flag
-	clearOSF();
+	clockEnable();
 }
 
 void setMinute(byte Minute) {
@@ -138,6 +129,67 @@ unsigned char timeToStr(char *strBuf, byte hour, byte minute, byte second) {
 		strBuf[7] = second % 10 + '0';
 	}
 	return 0;
+}
+
+byte setAlarm_Sec(byte sec, byte alarmSet) {
+	return rwByte(1, DS3231_REG_ALM1_SEC, decToBcd(sec | (alarmSet << 7)));
+}
+
+byte setAlarm_Min(byte numA, byte min, byte alarmSet) {
+	switch (numA) {
+		case 1:
+			return rwByte(1, DS3231_REG_ALM1_MIN, decToBcd(min | (alarmSet << 7)));
+			break;
+		case 2:
+			return rwByte(1, DS3231_REG_ALM2_MIN, decToBcd(min | (alarmSet << 7)));
+			break;
+		default:
+			return HAL_ERROR;
+			break;
+	}
+}
+
+byte setAlarm_Hour(byte numA, byte hour, byte alarmSet) {
+	switch (numA) {
+		case 1:
+			return rwByte(1, DS3231_REG_ALM1_HOUR, decToBcd(hour | (alarmSet << 7)));
+			break;
+		case 2:
+			return rwByte(1, DS3231_REG_ALM2_HOUR, decToBcd(hour | (alarmSet << 7)));
+			break;
+		default:
+			return HAL_ERROR;
+			break;
+	}
+}
+
+byte setAlarm_Date(byte numA, byte date, byte alarmSet) {
+	switch (numA) {
+			case 1:
+				return rwByte(1, DS3231_REG_ALM1_DATE, decToBcd(date | (alarmSet << 6)));
+				break;
+			case 2:
+				return rwByte(1, DS3231_REG_ALM2_DATE, decToBcd(date | (alarmSet << 6)));
+				break;
+			default:
+				return HAL_ERROR;
+				break;
+		}
+}
+
+byte setAlarmFrequency(byte value) {
+	byte result = rwByte(0, DS3231_REG_CTRL, 0); // Read Control register
+	return rwByte(1, DS3231_REG_CTRL, (result & 0b11100111) | (value << 3)); // Insert Freq value and write
+}
+
+byte setAlarm(byte numAlarm) {
+	byte result = rwByte(0, DS3231_REG_CTRL, 0); // Read Control register
+	return rwByte(1, DS3231_REG_CTRL, (result & 0b11111100) | numAlarm); // Insert Alarm value and write
+}
+
+byte clockEnable(void) {
+	byte result = rwByte(0, DS3231_REG_CTRL, 0); // Read Control register
+	return rwByte(1, DS3231_REG_CTRL, result & 0b01111111); // Insert "Enable oscillator" and write
 }
 
 /*

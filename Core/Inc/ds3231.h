@@ -116,6 +116,50 @@ void setYear(byte Year);
  * @retval errorcode (0 - no error)
  */
 unsigned char timeToStr(char *strBuf, byte hour, byte minute, byte second);
+/**
+ * @brief Set second to first alarm
+ * @param byte Number of second to set (0..59)
+ * @param byte Flag alarm. If the alarm clock is on, consider the value of seconds in the comparison. (0..1)
+ */
+byte setAlarm_Sec(byte sec, byte alarmSet);
+/**
+ * @brief Set minute to alarm
+ * @param byte Number of alarm to set (1..2)
+ * @param byte Number of minutes to set (0..59)
+ * @param byte Flag alarm. If the alarm clock is on, consider the value of minutes in the comparison. (0..1)
+ */
+byte setAlarm_Min(byte numA, byte min, byte alarmSet);
+/**
+ * @brief Set hour to alarm
+ * @param byte Number of alarm to set (1..2)
+ * @param byte Number of hours to set (0..59)
+ * @param byte Flag alarm. If the alarm clock is on, consider the value of hour in the comparison. (0..1)
+ */
+byte setAlarm_Hour(byte numA, byte hour, byte alarmSet);
+/**
+ * @brief Set day to alarm
+ * @param byte Number of alarm to set (1..2)
+ * @param byte Number of days to set (0..7 or 0..31 depending on parameter Flag alarm)
+ * @param byte Flag alarm. If the alarm clock is on, consider the value of minutes in the comparison. (0..3)
+ * 				0 and 1 - not consider the value days
+ * 				2 - consider the value with day of month
+ * 				3 - consider the value with day of week
+ */
+byte setAlarm_Date(byte numA, byte date, byte alarmSet);
+/**
+ * @brief Set frequency on pin INT/SQW when the alarm is turn on.
+ * @param byte: 0 - 1KHz, 1 - 1.024kHz, 2 - 4.096kHz, 3 - 8.192kHz
+ */
+byte setAlarmFrequency(byte value);
+/**
+ * @brief Turn on alarm
+ * @param byte Number of alarm to set (1 - Turn On alarm 1, 2 - .. alarm 2, 3 - .. alarm 1 and 2)
+ */
+byte setAlarm(byte numAlarm);
+/**
+ * @brief Enable oscillator (run clock)
+ */
+byte clockEnable(void);
 
 // Temperature function
 //float getTemperature();
